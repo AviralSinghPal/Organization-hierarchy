@@ -30,6 +30,9 @@ class EmployeeOrgApp implements IEmployeeOrgApp {
     if (!employee || !fromSupervisor || !toSupervisor) {
       throw new Error('Invalid employee or supervisor ID');
     }
+    if (supervisorID >= employeeID) {
+      throw new Error('Supervisor ID should be less than the employee ID.');
+    }
   
     this.history.push({
       employeeID,
@@ -206,10 +209,12 @@ const ceo: Employee = {
   ],
 };
 const app = new EmployeeOrgApp(ceo);
+
+
 // Function to display the hierarchy on the HTML page
 function displayHierarchy(employee: Employee, indent = ' '): void {
   const indentation = `${indent}  `;
-  const employeeName = `${indentation}${employee.uniqueId} - ${employee.name}`;
+  const employeeName = `${indentation}${employee.uniqueId}-${employee.name}`;
   document.getElementById('hierarchyOutput').textContent += employeeName + '\n';
   for (const subordinate of employee.subordinates) {
     displayHierarchy(subordinate, `${indentation}`);
@@ -231,6 +236,7 @@ function handleMove(): void {
     clearHierarchy();
     displayHierarchy(ceo);
   } catch (error) {
+    document.getElementById('errorMessage').textContent = error.message;
     console.error(error);
   }
 }
@@ -257,6 +263,8 @@ function handleRedo(): void {
   }
 }
 
+
+
 // Add event listeners to the buttons
 document.getElementById('moveButton').addEventListener('click', handleMove);
 document.getElementById('undoButton').addEventListener('click', handleUndo);
@@ -265,28 +273,6 @@ document.getElementById('redoButton').addEventListener('click', handleRedo);
 
 
 
-// Display the hierarchy on the HTML page
+// Display the hierarchy
 displayHierarchy(ceo);
 
-
-// Create the employee hierarchy
-
-
-// // Usage example
-
-// displayHierarchy(ceo); //before changing Hierarchy
-// app.move(7, 2); // Move Bob Saget to be subordinate of Cassandra Reynolds
-// console.log("<------------------------------------------------------------------------------------->");
-
-// // Display the hierarchy
-// displayHierarchy(ceo);
-
-// console.log("<------------------------------------------------------------------------------------->");
-  
-// app.undo(); // Undo the move action
-
-// // Display the hierarchy again
-// displayHierarchy(ceo);
-
-// console.log("<------------------------------------------------------------------------------------->");
-  

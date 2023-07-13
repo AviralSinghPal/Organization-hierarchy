@@ -10,6 +10,9 @@ var EmployeeOrgApp = /** @class */ (function () {
         if (!employee || !fromSupervisor || !toSupervisor) {
             throw new Error('Invalid employee or supervisor ID');
         }
+        if (supervisorID >= employeeID) {
+            throw new Error('Supervisor ID should be less than the employee ID.');
+        }
         this.history.push({
             employeeID: employeeID,
             fromSupervisor: fromSupervisor,
@@ -87,7 +90,6 @@ var EmployeeOrgApp = /** @class */ (function () {
     return EmployeeOrgApp;
 }());
 // Function to display the hierarchy
-// Rest of your existing TypeScript code...
 var ceo = {
     uniqueId: 1,
     name: 'John Smith',
@@ -176,7 +178,7 @@ var app = new EmployeeOrgApp(ceo);
 function displayHierarchy(employee, indent) {
     if (indent === void 0) { indent = ' '; }
     var indentation = "".concat(indent, "  ");
-    var employeeName = "".concat(indentation).concat(employee.uniqueId, " - ").concat(employee.name);
+    var employeeName = "".concat(indentation).concat(employee.uniqueId, "-").concat(employee.name);
     document.getElementById('hierarchyOutput').textContent += employeeName + '\n';
     for (var _i = 0, _a = employee.subordinates; _i < _a.length; _i++) {
         var subordinate = _a[_i];
@@ -197,6 +199,7 @@ function handleMove() {
         displayHierarchy(ceo);
     }
     catch (error) {
+        document.getElementById('errorMessage').textContent = error.message;
         console.error(error);
     }
 }
@@ -226,17 +229,5 @@ function handleRedo() {
 document.getElementById('moveButton').addEventListener('click', handleMove);
 document.getElementById('undoButton').addEventListener('click', handleUndo);
 document.getElementById('redoButton').addEventListener('click', handleRedo);
-// Display the hierarchy on the HTML page
+// Display the hierarchy
 displayHierarchy(ceo);
-// Create the employee hierarchy
-// // Usage example
-// displayHierarchy(ceo); //before changing Hierarchy
-// app.move(7, 2); // Move Bob Saget to be subordinate of Cassandra Reynolds
-// console.log("<------------------------------------------------------------------------------------->");
-// // Display the hierarchy
-// displayHierarchy(ceo);
-// console.log("<------------------------------------------------------------------------------------->");
-// app.undo(); // Undo the move action
-// // Display the hierarchy again
-// displayHierarchy(ceo);
-// console.log("<------------------------------------------------------------------------------------->");

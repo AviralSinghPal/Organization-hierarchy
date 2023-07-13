@@ -2,24 +2,11 @@
 <html>
 <head>
   <title>Employee Organization App</title>
-  <style>
-    .hierarchy-container {
-      font-family: Arial, sans-serif;
-    }
-    .input-container {
-      margin-bottom: 20px;
-    }
-    .button-container {
-      margin-top: 10px;
-    }
-    .button-container button {
-      margin-right: 10px;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="hierarchy-container">
-    <h2>Organization Hierarchy</h2>
+    <h1>Organization Hierarchy</h1>
     <pre id="hierarchyOutput"></pre>
   </div>
 
@@ -29,9 +16,14 @@
     <label for="supervisorID">Supervisor ID:</label>
     <input type="number" id="supervisorID">
     <button id="moveButton">Move</button>
-    <button id="undoButton">Undo</button>
-    <button id="redoButton">Redo</button>
   </div>
+    <div class="button-container">
+      
+      <button id="undoButton">Undo</button>
+      <button id="redoButton">Redo</button>
+    </div>
+  
+  <div id="errorMessage" class="error-message"></div>
 
   <script src="index.js"></script>
 </body>
