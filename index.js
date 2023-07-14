@@ -1,20 +1,33 @@
+function cloneEmployeeHierarchy(employee) {
+    var clonedEmployee = {
+        uniqueId: employee.uniqueId,
+        name: employee.name,
+        subordinates: [],
+    };
+    for (var _i = 0, _a = employee.subordinates; _i < _a.length; _i++) {
+        var subordinate = _a[_i];
+        var clonedSubordinate = cloneEmployeeHierarchy(subordinate);
+        clonedEmployee.subordinates.push(clonedSubordinate);
+    }
+    return clonedEmployee;
+}
 var EmployeeOrgApp = /** @class */ (function () {
     function EmployeeOrgApp(ceo) {
         this.ceo = ceo;
-        this.history = [];
+        this.history = [cloneEmployeeHierarchy(ceo)];
+        this.currentIndex = 0;
     }
     EmployeeOrgApp.prototype.move = function (employeeID, supervisorID) {
         var employee = this.findEmployee(this.ceo, employeeID);
         var fromSupervisor = this.findSupervisor(this.ceo, employeeID);
         var toSupervisor = this.findEmployee(this.ceo, supervisorID);
         if (!employee || !fromSupervisor || !toSupervisor) {
-            throw new Error('Invalid employee or supervisor ID');
+            throw new Error("Invalid employee or supervisor ID");
         }
-        this.history.push({
-            employeeID: employeeID,
-            fromSupervisor: fromSupervisor,
-            toSupervisor: toSupervisor,
-        });
+        var historyCopy = cloneEmployeeHierarchy(this.history[this.currentIndex]);
+        this.history.splice(this.currentIndex + 1);
+        this.history.push(historyCopy);
+        this.currentIndex = this.history.length - 1;
         // Remove employee from old supervisor's subordinates
         var fromSubordinates = fromSupervisor.subordinates;
         var employeeIndex = -1;
@@ -25,38 +38,42 @@ var EmployeeOrgApp = /** @class */ (function () {
             }
         }
         if (employeeIndex !== -1) {
-            fromSubordinates.splice(employeeIndex, 1);
+            var movedEmployee = fromSubordinates.splice(employeeIndex, 1)[0];
+            movedEmployee.subordinates.forEach(function (subordinate) {
+                fromSupervisor.subordinates.push(subordinate);
+            });
+            movedEmployee.subordinates.length = 0;
         }
         // Add employee to new supervisor's subordinates
         toSupervisor.subordinates.push(employee);
     };
     EmployeeOrgApp.prototype.undo = function () {
-        var lastAction = this.history.pop();
-        if (!lastAction) {
-            throw new Error('No actions to undo');
+        if (this.currentIndex <= 0) {
+            throw new Error("No actions to undo");
         }
-        var employeeID = lastAction.employeeID, fromSupervisor = lastAction.fromSupervisor, toSupervisor = lastAction.toSupervisor;
-        var employee = this.findEmployee(this.ceo, employeeID);
-        if (!employee) {
-            throw new Error('Invalid employee ID');
+        var currentHierarchy = this.history[this.currentIndex];
+        var previousHierarchy = this.history[this.currentIndex - 1];
+        // Find the differences between the current and previous hierarchy
+        var differences = this.findHierarchyDifferences(currentHierarchy, previousHierarchy);
+        // Move the employees back to their previous supervisors
+        for (var _i = 0, differences_1 = differences; _i < differences_1.length; _i++) {
+            var difference = differences_1[_i];
+            var employeeID = difference.employeeID, previousSupervisorID = difference.previousSupervisorID;
+            this.move(employeeID, previousSupervisorID);
         }
-        // Remove employee from new supervisor's subordinates
-        var toSubordinates = toSupervisor.subordinates;
-        var employeeIndex = -1;
-        for (var i = 0; i < toSubordinates.length; i++) {
-            if (toSubordinates[i].uniqueId === employeeID) {
-                employeeIndex = i;
-                break;
-            }
-        }
-        if (employeeIndex !== -1) {
-            toSubordinates.splice(employeeIndex, 1);
-        }
-        // Add employee back to old supervisor's subordinates
-        fromSupervisor.subordinates.push(employee);
+        this.currentIndex--;
+        this.ceo = cloneEmployeeHierarchy(previousHierarchy);
+        clearHierarchy();
+        displayHierarchy(this.ceo);
     };
     EmployeeOrgApp.prototype.redo = function () {
-        throw new Error('Redo feature is not implemented');
+        if (this.currentIndex >= this.history.length - 1) {
+            throw new Error("No actions to redo");
+        }
+        this.currentIndex++;
+        this.ceo = cloneEmployeeHierarchy(this.history[this.currentIndex]);
+        clearHierarchy();
+        displayHierarchy(this.ceo);
     };
     EmployeeOrgApp.prototype.findEmployee = function (manager, employeeID) {
         if (manager.uniqueId === employeeID) {
@@ -84,38 +101,55 @@ var EmployeeOrgApp = /** @class */ (function () {
         }
         return undefined;
     };
+    EmployeeOrgApp.prototype.findHierarchyDifferences = function (currentHierarchy, previousHierarchy) {
+        var differences = [];
+        this.findEmployeeDifferences(currentHierarchy, previousHierarchy, differences);
+        return differences;
+    };
+    EmployeeOrgApp.prototype.findEmployeeDifferences = function (currentEmployee, previousEmployee, differences, previousSupervisorID) {
+        if (currentEmployee.uniqueId !== previousEmployee.uniqueId || currentEmployee.subordinates.length !== previousEmployee.subordinates.length || previousSupervisorID !== undefined) {
+            differences.push({
+                employeeID: currentEmployee.uniqueId,
+                previousSupervisorID: previousSupervisorID !== undefined ? previousSupervisorID : currentEmployee.uniqueId,
+            });
+        }
+        for (var i = 0; i < currentEmployee.subordinates.length; i++) {
+            var currentSubordinate = currentEmployee.subordinates[i];
+            var previousSubordinate = previousEmployee.subordinates[i];
+            this.findEmployeeDifferences(currentSubordinate, previousSubordinate, differences, previousEmployee.uniqueId);
+        }
+    };
     return EmployeeOrgApp;
 }());
 // Function to display the hierarchy
-// Rest of your existing TypeScript code...
 var ceo = {
     uniqueId: 1,
-    name: 'John Smith',
+    name: "John Smith",
     subordinates: [
         {
             uniqueId: 2,
-            name: 'Margot Donald',
+            name: "Margot Donald",
             subordinates: [
                 {
                     uniqueId: 3,
-                    name: 'Cassandra Reynolds',
+                    name: "Cassandra Reynolds",
                     subordinates: [
                         {
                             uniqueId: 4,
-                            name: 'Mary Blue',
+                            name: "Mary Blue",
                             subordinates: [],
                         },
                         {
                             uniqueId: 5,
-                            name: 'Bob Saget',
+                            name: "Bob Saget",
                             subordinates: [
                                 {
                                     uniqueId: 6,
-                                    name: 'Tina Teff',
+                                    name: "Tina Teff",
                                     subordinates: [
                                         {
                                             uniqueId: 7,
-                                            name: 'Will Turner',
+                                            name: "Will Turner",
                                             subordinates: [],
                                         },
                                     ],
@@ -128,43 +162,43 @@ var ceo = {
         },
         {
             uniqueId: 8,
-            name: 'Tyler Simpson',
+            name: "Tyler Simpson",
             subordinates: [
                 {
                     uniqueId: 9,
-                    name: 'Harry Tobs',
+                    name: "Harry Tobs",
                     subordinates: [
                         {
                             uniqueId: 10,
-                            name: 'Thomas Brown',
+                            name: "Thomas Brown",
                             subordinates: [],
                         },
                     ],
                 },
                 {
                     uniqueId: 11,
-                    name: 'George Carrey',
+                    name: "George Carrey",
                     subordinates: [],
                 },
                 {
                     uniqueId: 12,
-                    name: 'Gary Styles',
+                    name: "Gary Styles",
                     subordinates: [],
                 },
             ],
         },
         {
             uniqueId: 13,
-            name: 'Ben Willis',
+            name: "Ben Willis",
             subordinates: [],
         },
         {
             uniqueId: 14,
-            name: 'Georgina Flangy',
+            name: "Georgina Flangy",
             subordinates: [
                 {
                     uniqueId: 15,
-                    name: 'Sophie Turner',
+                    name: "Sophie Turner",
                     subordinates: [],
                 },
             ],
@@ -174,10 +208,10 @@ var ceo = {
 var app = new EmployeeOrgApp(ceo);
 // Function to display the hierarchy on the HTML page
 function displayHierarchy(employee, indent) {
-    if (indent === void 0) { indent = ' '; }
+    if (indent === void 0) { indent = " "; }
     var indentation = "".concat(indent, "  ");
-    var employeeName = "".concat(indentation).concat(employee.uniqueId, " - ").concat(employee.name);
-    document.getElementById('hierarchyOutput').textContent += employeeName + '\n';
+    var employeeName = "".concat(indentation, "(").concat(employee.uniqueId, ")").concat(employee.name);
+    document.getElementById("hierarchyOutput").textContent += employeeName + "\n";
     for (var _i = 0, _a = employee.subordinates; _i < _a.length; _i++) {
         var subordinate = _a[_i];
         displayHierarchy(subordinate, "".concat(indentation));
@@ -185,18 +219,19 @@ function displayHierarchy(employee, indent) {
 }
 // Function to clear the hierarchy output
 function clearHierarchy() {
-    document.getElementById('hierarchyOutput').textContent = '';
+    document.getElementById("hierarchyOutput").textContent = "";
 }
 // Function to move an employee based on user input
 function handleMove() {
-    var employeeID = parseInt(document.getElementById('employeeID').value);
-    var supervisorID = parseInt(document.getElementById('supervisorID').value);
+    var employeeID = parseInt(document.getElementById("employeeID").value);
+    var supervisorID = parseInt(document.getElementById("supervisorID").value);
     try {
         app.move(employeeID, supervisorID);
         clearHierarchy();
         displayHierarchy(ceo);
     }
     catch (error) {
+        document.getElementById("errorMessage").textContent = error.message;
         console.error(error);
     }
 }
@@ -222,21 +257,7 @@ function handleRedo() {
         console.error(error);
     }
 }
-// Add event listeners to the buttons
-document.getElementById('moveButton').addEventListener('click', handleMove);
-document.getElementById('undoButton').addEventListener('click', handleUndo);
-document.getElementById('redoButton').addEventListener('click', handleRedo);
-// Display the hierarchy on the HTML page
+document.getElementById("moveButton").addEventListener("click", handleMove);
+document.getElementById("undoButton").addEventListener("click", handleUndo);
+document.getElementById("redoButton").addEventListener("click", handleRedo);
 displayHierarchy(ceo);
-// Create the employee hierarchy
-// // Usage example
-// displayHierarchy(ceo); //before changing Hierarchy
-// app.move(7, 2); // Move Bob Saget to be subordinate of Cassandra Reynolds
-// console.log("<------------------------------------------------------------------------------------->");
-// // Display the hierarchy
-// displayHierarchy(ceo);
-// console.log("<------------------------------------------------------------------------------------->");
-// app.undo(); // Undo the move action
-// // Display the hierarchy again
-// displayHierarchy(ceo);
-// console.log("<------------------------------------------------------------------------------------->");
